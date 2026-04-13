@@ -1,29 +1,31 @@
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Alert, Button, Select, Space } from "antd";
+import { Alert, Button, Input, Select, Space } from "antd";
 import {
-  clearCompleted,
-  setFilter,
+  clearDoneTasks,
   setPriorityFilter,
   setProjectFilter,
+  setSearchQuery,
   setSortBy,
+  setStatusFilter,
 } from "./todoSlice";
 import {
   selectCanDragTodos,
-  selectFilter,
-  selectHasCompletedTodos,
+  selectHasDoneTasks,
   selectPriorityFilter,
   selectProjectFilter,
   selectProjectFilterOptions,
+  selectSearchQuery,
   selectSortBy,
+  selectStatusFilter,
   selectTodosStats,
 } from "./selectors";
 
-const sortOptions = [
-  { value: "manual", label: "Manual order" },
-  { value: "date-asc", label: "Due date: nearest first" },
-  { value: "date-desc", label: "Due date: latest first" },
-  { value: "priority-desc", label: "Priority: high to low" },
-  { value: "priority-asc", label: "Priority: low to high" },
+const statusFilterOptions = [
+  { value: "all", label: "All statuses" },
+  { value: "todo", label: "To do" },
+  { value: "in_progress", label: "In progress" },
+  { value: "done", label: "Done" },
 ];
 
 const priorityFilterOptions = [
@@ -33,62 +35,81 @@ const priorityFilterOptions = [
   { value: "low", label: "Low priority" },
 ];
 
+const sortOptions = [
+  { value: "manual", label: "Manual order" },
+  { value: "date-asc", label: "Due date: nearest first" },
+  { value: "date-desc", label: "Due date: latest first" },
+  { value: "priority-desc", label: "Priority: high to low" },
+  { value: "priority-asc", label: "Priority: low to high" },
+];
+
 const TodoFilters = () => {
   const dispatch = useDispatch();
 
-  const currentFilter = useSelector(selectFilter);
+  const currentStatusFilter = useSelector(selectStatusFilter);
   const currentPriorityFilter = useSelector(selectPriorityFilter);
   const currentProjectFilter = useSelector(selectProjectFilter);
   const currentSortBy = useSelector(selectSortBy);
+  const currentSearchQuery = useSelector(selectSearchQuery);
   const projectFilterOptions = useSelector(selectProjectFilterOptions);
   const stats = useSelector(selectTodosStats);
-  const hasCompletedTodos = useSelector(selectHasCompletedTodos);
+  const hasDoneTasks = useSelector(selectHasDoneTasks);
   const canDragTodos = useSelector(selectCanDragTodos);
+
+  const [searchInput, setSearchInput] = useState(currentSearchQuery);
+
+  useEffect(() => {
+    setSearchInput(currentSearchQuery);
+  }, [currentSearchQuery]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      dispatch(setSearchQuery(searchInput));
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [dispatch, searchInput]);
 
   return (
     <div className="todo-filters-wrapper">
       <div className="todo-stats">
         <span>Total: {stats.total}</span>
-        <span>Active: {stats.active}</span>
-        <span>Completed: {stats.completed}</span>
+        <span>To do: {stats.todo}</span>
+        <span>In progress: {stats.inProgress}</span>
+        <span>Done: {stats.done}</span>
+      </div>
+
+      <div className="todo-search-row">
+        <Input
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.target.value)}
+          placeholder="Search by title or description"
+          size="large"
+          allowClear
+        />
       </div>
 
       <div className="todo-controls-row">
         <Space wrap className="todo-filters">
           <Button
-            type={currentFilter === "all" ? "primary" : "default"}
-            disabled={currentFilter === "all"}
-            onClick={() => dispatch(setFilter("all"))}
-          >
-            All
-          </Button>
-
-          <Button
-            type={currentFilter === "active" ? "primary" : "default"}
-            disabled={currentFilter === "active"}
-            onClick={() => dispatch(setFilter("active"))}
-          >
-            Active
-          </Button>
-
-          <Button
-            type={currentFilter === "completed" ? "primary" : "default"}
-            disabled={currentFilter === "completed"}
-            onClick={() => dispatch(setFilter("completed"))}
-          >
-            Completed
-          </Button>
-
-          <Button
             danger
-            disabled={!hasCompletedTodos}
-            onClick={() => dispatch(clearCompleted())}
+            disabled={!hasDoneTasks}
+            onClick={() => dispatch(clearDoneTasks())}
           >
-            Clear Completed
+            Clear Done
           </Button>
         </Space>
 
         <div className="todo-selects-group">
+          <Select
+            value={currentStatusFilter}
+            options={statusFilterOptions}
+            onChange={(value) => dispatch(setStatusFilter(value))}
+            className="todo-status-filter"
+          />
+
           <Select
             value={currentProjectFilter}
             options={projectFilterOptions}

@@ -14,7 +14,8 @@ const defaultState = {
     {
       id: "1",
       text: "Finish Redux Toolkit setup",
-      completed: false,
+      description: "Configure store, slices, selectors and connect Provider.",
+      status: "todo",
       priority: "high",
       dueDate: "2026-04-15",
       projectId: "project-1",
@@ -23,7 +24,8 @@ const defaultState = {
     {
       id: "2",
       text: "Implement task filtering",
-      completed: false,
+      description: "Add filters by status, priority and project.",
+      status: "in_progress",
       priority: "medium",
       dueDate: "2026-04-18",
       projectId: "project-1",
@@ -32,7 +34,8 @@ const defaultState = {
     {
       id: "3",
       text: "Prepare newsletter content",
-      completed: true,
+      description: "Write draft copy for the spring campaign email.",
+      status: "done",
       priority: "low",
       dueDate: "2026-04-12",
       projectId: "project-2",
@@ -41,24 +44,32 @@ const defaultState = {
     {
       id: "4",
       text: "Improve UI with Ant Design",
-      completed: false,
+      description: "Refine spacing, visual hierarchy and responsive behavior.",
+      status: "todo",
       priority: "medium",
       dueDate: "2026-04-20",
       projectId: "project-3",
       createdAt: "2026-04-13T08:30:00.000Z",
     },
   ],
-  filter: "all",
+  statusFilter: "all",
   priorityFilter: "all",
   projectFilter: "all",
+  searchQuery: "",
   sortBy: "manual",
 };
 
 const isValidPriority = (value) =>
   value === "low" || value === "medium" || value === "high";
 
+const isValidStatus = (value) =>
+  value === "todo" || value === "in_progress" || value === "done";
+
 const isValidStatusFilter = (value) =>
-  value === "all" || value === "active" || value === "completed";
+  value === "all" ||
+  value === "todo" ||
+  value === "in_progress" ||
+  value === "done";
 
 const isValidPriorityFilter = (value) =>
   value === "all" || value === "low" || value === "medium" || value === "high";
@@ -71,6 +82,8 @@ const isValidSortBy = (value) =>
   value === "priority-asc";
 
 const sanitizeProjectName = (value) => value?.trim() || "";
+const sanitizeText = (value) => value?.trim() || "";
+const sanitizeDescription = (value) => value?.trim() || "";
 
 const normalizeProjects = (projects) => {
   if (!Array.isArray(projects) || projects.length === 0) {
@@ -115,7 +128,12 @@ const normalizeItems = (items, projects) => {
   return items.map((item) => ({
     id: String(item?.id ?? nanoid()),
     text: typeof item?.text === "string" ? item.text : "Untitled task",
-    completed: Boolean(item?.completed),
+    description: typeof item?.description === "string" ? item.description : "",
+    status: isValidStatus(item?.status)
+      ? item.status
+      : item?.completed
+        ? "done"
+        : "todo",
     priority: isValidPriority(item?.priority) ? item.priority : "medium",
     dueDate: item?.dueDate || null,
     projectId:
@@ -146,7 +164,11 @@ const loadStateFromStorage = () => {
     return {
       projects,
       items,
-      filter: isValidStatusFilter(parsed.filter) ? parsed.filter : "all",
+      statusFilter: isValidStatusFilter(parsed.statusFilter)
+        ? parsed.statusFilter
+        : isValidStatusFilter(parsed.filter)
+          ? parsed.filter
+          : "all",
       priorityFilter: isValidPriorityFilter(parsed.priorityFilter)
         ? parsed.priorityFilter
         : "all",
@@ -155,6 +177,8 @@ const loadStateFromStorage = () => {
         projects.some((project) => project.id === parsed.projectFilter)
           ? parsed.projectFilter
           : "all",
+      searchQuery:
+        typeof parsed.searchQuery === "string" ? parsed.searchQuery : "",
       sortBy: isValidSortBy(parsed.sortBy) ? parsed.sortBy : "manual",
     };
   } catch (error) {
@@ -173,11 +197,23 @@ const todoSlice = createSlice({
       reducer: (state, action) => {
         state.items.unshift(action.payload);
       },
-      prepare: ({ text, priority, dueDate, projectId }) => {
-        const value = text?.trim();
+      prepare: ({
+        text,
+        description,
+        status,
+        priority,
+        dueDate,
+        projectId,
+      }) => {
+        const normalizedText = sanitizeText(text);
+        const normalizedDescription = sanitizeDescription(description);
 
-        if (!value) {
-          throw new Error("Todo text cannot be empty");
+        if (!normalizedText) {
+          throw new Error("Task title cannot be empty");
+        }
+
+        if (!isValidStatus(status)) {
+          throw new Error("Invalid status value");
         }
 
         if (!isValidPriority(priority)) {
@@ -191,8 +227,9 @@ const todoSlice = createSlice({
         return {
           payload: {
             id: nanoid(),
-            text: value,
-            completed: false,
+            text: normalizedText,
+            description: normalizedDescription,
+            status,
             priority,
             dueDate: dueDate || null,
             projectId,
@@ -231,12 +268,15 @@ const todoSlice = createSlice({
       },
     },
 
-    toggleTodo: (state, action) => {
-      const todo = state.items.find((item) => item.id === action.payload);
+    setTodoStatus: (state, action) => {
+      const { id, status } = action.payload;
+      const todo = state.items.find((item) => item.id === id);
 
-      if (!todo) return;
+      if (!todo || !isValidStatus(status)) {
+        return;
+      }
 
-      todo.completed = !todo.completed;
+      todo.status = status;
     },
 
     deleteTodo: (state, action) => {
@@ -244,16 +284,23 @@ const todoSlice = createSlice({
     },
 
     updateTodo: (state, action) => {
-      const { id, text, priority, dueDate, projectId } = action.payload;
+      const { id, text, description, status, priority, dueDate, projectId } =
+        action.payload;
       const todo = state.items.find((item) => item.id === id);
 
-      if (!todo) return;
+      if (!todo) {
+        return;
+      }
 
-      const value = text?.trim();
+      const normalizedText = sanitizeText(text);
 
-      if (!value) return;
+      if (!normalizedText) {
+        return;
+      }
 
-      todo.text = value;
+      todo.text = normalizedText;
+      todo.description = sanitizeDescription(description);
+      todo.status = isValidStatus(status) ? status : todo.status;
       todo.priority = isValidPriority(priority) ? priority : todo.priority;
       todo.dueDate = dueDate || null;
 
@@ -266,12 +313,12 @@ const todoSlice = createSlice({
       }
     },
 
-    setFilter: (state, action) => {
+    setStatusFilter: (state, action) => {
       if (!isValidStatusFilter(action.payload)) {
         return;
       }
 
-      state.filter = action.payload;
+      state.statusFilter = action.payload;
     },
 
     setPriorityFilter: (state, action) => {
@@ -293,6 +340,11 @@ const todoSlice = createSlice({
       }
     },
 
+    setSearchQuery: (state, action) => {
+      state.searchQuery =
+        typeof action.payload === "string" ? action.payload : "";
+    },
+
     setSortBy: (state, action) => {
       if (!isValidSortBy(action.payload)) {
         return;
@@ -301,8 +353,8 @@ const todoSlice = createSlice({
       state.sortBy = action.payload;
     },
 
-    clearCompleted: (state) => {
-      state.items = state.items.filter((item) => !item.completed);
+    clearDoneTasks: (state) => {
+      state.items = state.items.filter((item) => item.status !== "done");
     },
 
     moveTodo: (state, action) => {
@@ -328,14 +380,15 @@ const todoSlice = createSlice({
 export const {
   addTodo,
   addProject,
-  toggleTodo,
+  setTodoStatus,
   deleteTodo,
   updateTodo,
-  setFilter,
+  setStatusFilter,
   setPriorityFilter,
   setProjectFilter,
+  setSearchQuery,
   setSortBy,
-  clearCompleted,
+  clearDoneTasks,
   moveTodo,
 } = todoSlice.actions;
 

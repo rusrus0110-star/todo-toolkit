@@ -58,7 +58,7 @@ const TodoList = () => {
   return (
     <Card className="todo-card">
       <Title level={1} className="todo-title">
-        Todo List
+        Personal Task Manager
       </Title>
 
       <TodoFilters />
@@ -81,7 +81,7 @@ const TodoList = () => {
           </DndContext>
         ) : (
           <div className="todo-empty">
-            <Empty description="No tasks found" />
+            <Empty description="No tasks match the current filters" />
           </div>
         )}
       </div>

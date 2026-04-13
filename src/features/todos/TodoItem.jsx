@@ -9,8 +9,10 @@ import {
   EditOutlined,
   HolderOutlined,
 } from "@ant-design/icons";
-import { deleteTodo, toggleTodo, updateTodo } from "./todoSlice";
+import { deleteTodo, setTodoStatus, updateTodo } from "./todoSlice";
 import { selectProjectOptions, selectProjectsMap } from "./selectors";
+
+const { TextArea } = Input;
 
 const priorityOptions = [
   { value: "low", label: "Low" },
@@ -18,10 +20,28 @@ const priorityOptions = [
   { value: "high", label: "High" },
 ];
 
+const statusOptions = [
+  { value: "todo", label: "To do" },
+  { value: "in_progress", label: "In progress" },
+  { value: "done", label: "Done" },
+];
+
 const priorityColorMap = {
   low: "default",
   medium: "gold",
   high: "red",
+};
+
+const statusColorMap = {
+  todo: "default",
+  in_progress: "processing",
+  done: "success",
+};
+
+const statusLabelMap = {
+  todo: "TO DO",
+  in_progress: "IN PROGRESS",
+  done: "DONE",
 };
 
 const TodoItem = ({ todo, canDrag }) => {
@@ -31,6 +51,8 @@ const TodoItem = ({ todo, canDrag }) => {
 
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(todo.text);
+  const [description, setDescription] = useState(todo.description);
+  const [status, setStatus] = useState(todo.status);
   const [priority, setPriority] = useState(todo.priority);
   const [dueDate, setDueDate] = useState(
     todo.dueDate ? dayjs(todo.dueDate) : null,
@@ -56,24 +78,38 @@ const TodoItem = ({ todo, canDrag }) => {
 
   const isOverdue =
     Boolean(todo.dueDate) &&
-    !todo.completed &&
+    todo.status !== "done" &&
     dayjs(todo.dueDate).isBefore(dayjs(), "day");
 
   const projectName = projectsMap[todo.projectId] || "Unknown project";
 
   const resetEditStateFromTodo = () => {
     setValue(todo.text);
+    setDescription(todo.description);
+    setStatus(todo.status);
     setPriority(todo.priority);
     setDueDate(todo.dueDate ? dayjs(todo.dueDate) : null);
     setProjectId(todo.projectId);
   };
 
-  const handleToggle = () => {
-    dispatch(toggleTodo(todo.id));
-  };
-
   const handleDelete = () => {
     dispatch(deleteTodo(todo.id));
+  };
+
+  const handleQuickStatusChange = () => {
+    const nextStatus =
+      todo.status === "todo"
+        ? "in_progress"
+        : todo.status === "in_progress"
+          ? "done"
+          : "todo";
+
+    dispatch(
+      setTodoStatus({
+        id: todo.id,
+        status: nextStatus,
+      }),
+    );
   };
 
   const handleStartEdit = () => {
@@ -94,6 +130,8 @@ const TodoItem = ({ todo, canDrag }) => {
       updateTodo({
         id: todo.id,
         text: trimmedValue,
+        description,
+        status,
         priority,
         dueDate: dueDate ? dueDate.format("YYYY-MM-DD") : null,
         projectId,
@@ -109,7 +147,7 @@ const TodoItem = ({ todo, canDrag }) => {
   };
 
   const handleKeyDown = (event) => {
-    if (event.key === "Enter") {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
       handleSave();
     }
 
@@ -149,7 +187,22 @@ const TodoItem = ({ todo, canDrag }) => {
               onKeyDown={handleKeyDown}
             />
 
-            <div className="todo-edit-row">
+            <TextArea
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              autoSize={{ minRows: 3, maxRows: 5 }}
+              onKeyDown={handleKeyDown}
+              placeholder="Task description"
+            />
+
+            <div className="todo-edit-grid">
+              <Select
+                value={status}
+                options={statusOptions}
+                onChange={setStatus}
+                className="todo-item-status-select"
+              />
+
               <Select
                 value={priority}
                 options={priorityOptions}
@@ -183,16 +236,26 @@ const TodoItem = ({ todo, canDrag }) => {
           </div>
         ) : (
           <>
-            <span
-              className={`todo-text ${todo.completed ? "completed" : ""}`}
-              onDoubleClick={handleStartEdit}
-              title="Double click to edit"
-            >
-              {todo.text}
-            </span>
+            <div className="todo-title-row">
+              <span
+                className={`todo-text ${todo.status === "done" ? "completed" : ""}`}
+                onDoubleClick={handleStartEdit}
+                title="Double click to edit"
+              >
+                {todo.text}
+              </span>
+            </div>
+
+            {todo.description && (
+              <p className="todo-description">{todo.description}</p>
+            )}
 
             <div className="todo-meta">
               <Tag color="blue">{projectName}</Tag>
+
+              <Tag color={statusColorMap[todo.status]}>
+                {statusLabelMap[todo.status]}
+              </Tag>
 
               <Tag color={priorityColorMap[todo.priority]}>
                 {todo.priority.toUpperCase()}
@@ -210,8 +273,12 @@ const TodoItem = ({ todo, canDrag }) => {
 
       {!isEditing && (
         <div className="todo-actions">
-          <Button type="primary" onClick={handleToggle}>
-            {todo.completed ? "Undo" : "Complete"}
+          <Button type="primary" onClick={handleQuickStatusChange}>
+            {todo.status === "todo"
+              ? "Start"
+              : todo.status === "in_progress"
+                ? "Complete"
+                : "Reopen"}
           </Button>
 
           <Button icon={<EditOutlined />} onClick={handleStartEdit}>

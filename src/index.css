@@ -16,7 +16,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -40,9 +41,9 @@ input {
   gap: 12px;
 }
 
-.todo-form-row {
+.todo-form-grid {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 180px 180px 1fr;
   gap: 12px;
 }
 
@@ -53,6 +54,7 @@ input {
   gap: 12px;
 }
 
+.todo-status-select,
 .todo-priority-select,
 .todo-date-picker,
 .todo-project-select {
@@ -74,7 +76,7 @@ input {
 }
 
 .todo-card.ant-card {
-  max-width: 960px;
+  max-width: 1040px;
   margin: 18px auto 0;
   border: 1px solid #d9d9d9;
   border-radius: 8px;
@@ -107,6 +109,10 @@ input {
   color: #595959;
 }
 
+.todo-search-row {
+  margin-bottom: 14px;
+}
+
 .todo-controls-row {
   display: flex;
   gap: 16px;
@@ -127,11 +133,10 @@ input {
   justify-content: flex-end;
 }
 
-.todo-project-filter {
-  min-width: 210px;
-}
-
-.todo-priority-filter {
+.todo-status-filter,
+.todo-project-filter,
+.todo-priority-filter,
+.todo-sort-select {
   min-width: 190px;
 }
 
@@ -152,8 +157,8 @@ input {
   grid-template-columns: 44px 1fr auto;
   align-items: flex-start;
   gap: 16px;
-  min-height: 78px;
-  padding: 12px 6px;
+  min-height: 110px;
+  padding: 14px 6px;
   border-bottom: 1px solid #d9d9d9;
   background-color: #ffffff;
 }
@@ -192,6 +197,13 @@ input {
   min-width: 0;
 }
 
+.todo-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
 .todo-text {
   display: inline-block;
   width: 100%;
@@ -199,12 +211,18 @@ input {
   color: #000000;
   word-break: break-word;
   cursor: pointer;
-  margin-bottom: 10px;
 }
 
 .todo-text.completed {
   color: #8c8c8c;
   text-decoration: line-through;
+}
+
+.todo-description {
+  margin: 0 0 12px;
+  color: #595959;
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 .todo-meta {
@@ -232,12 +250,13 @@ input {
   gap: 12px;
 }
 
-.todo-edit-row {
+.todo-edit-grid {
   display: grid;
-  grid-template-columns: 180px 220px;
+  grid-template-columns: 180px 180px 220px;
   gap: 12px;
 }
 
+.todo-item-status-select,
 .todo-item-priority-select,
 .todo-item-date-picker,
 .todo-item-project-select {
@@ -251,6 +270,13 @@ input {
 
 .todo-empty {
   padding: 24px 0 8px;
+}
+
+@media (max-width: 1000px) {
+  .todo-form-grid,
+  .todo-edit-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 900px) {
@@ -273,10 +299,8 @@ input {
     font-size: 28px;
   }
 
-  .todo-form-row,
   .todo-project-row,
-  .todo-new-project-row,
-  .todo-edit-row {
+  .todo-new-project-row {
     grid-template-columns: 1fr;
   }
 
@@ -295,6 +319,7 @@ input {
     justify-content: stretch;
   }
 
+  .todo-status-filter,
   .todo-project-filter,
   .todo-priority-filter,
   .todo-sort-select {
