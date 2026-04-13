@@ -1,8 +1,11 @@
 import { createSlice, nanoid } from "@reduxjs/toolkit";
 
 const initialState = {
-  items: [],
-  filter: "all",
+  items: [
+    { id: "1", text: "Todo 1", completed: false },
+    { id: "2", text: "Todo 2", completed: false },
+    { id: "3", text: "Todo 3", completed: true },
+  ],
 };
 
 const todoSlice = createSlice({
@@ -11,17 +14,20 @@ const todoSlice = createSlice({
   reducers: {
     addTodo: {
       reducer: (state, action) => {
-        state.items.unshift(action.payload);
+        state.items.push(action.payload);
       },
-      prepare: (title) => {
-        const normalizedTitle = String(title).trim();
+      prepare: (text) => {
+        const value = text?.trim();
+
+        if (!value) {
+          throw new Error("Todo text cannot be empty");
+        }
 
         return {
           payload: {
             id: nanoid(),
-            title: normalizedTitle,
+            text: value,
             completed: false,
-            createdAt: new Date().toISOString(),
           },
         };
       },
@@ -30,26 +36,16 @@ const todoSlice = createSlice({
     toggleTodo: (state, action) => {
       const todo = state.items.find((item) => item.id === action.payload);
 
-      if (todo) {
-        todo.completed = !todo.completed;
-      }
+      if (!todo) return;
+
+      todo.completed = !todo.completed;
     },
 
     deleteTodo: (state, action) => {
       state.items = state.items.filter((item) => item.id !== action.payload);
     },
-
-    setFilter: (state, action) => {
-      state.filter = action.payload;
-    },
-
-    clearCompleted: (state) => {
-      state.items = state.items.filter((item) => !item.completed);
-    },
   },
 });
 
-export const { addTodo, toggleTodo, deleteTodo, setFilter, clearCompleted } =
-  todoSlice.actions;
-
+export const { addTodo, toggleTodo, deleteTodo } = todoSlice.actions;
 export default todoSlice.reducer;
