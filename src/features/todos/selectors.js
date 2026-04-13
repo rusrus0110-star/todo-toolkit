@@ -20,11 +20,25 @@ const getDateTimestamp = (value) => {
   return parsed;
 };
 
+const matchesSearch = (todo, searchQuery) => {
+  if (!searchQuery) {
+    return true;
+  }
+
+  const normalizedQuery = searchQuery.toLowerCase();
+
+  return (
+    todo.text.toLowerCase().includes(normalizedQuery) ||
+    todo.description.toLowerCase().includes(normalizedQuery)
+  );
+};
+
 export const selectTodos = (state) => state.todos.items;
 export const selectProjects = (state) => state.todos.projects;
-export const selectFilter = (state) => state.todos.filter;
+export const selectStatusFilter = (state) => state.todos.statusFilter;
 export const selectPriorityFilter = (state) => state.todos.priorityFilter;
 export const selectProjectFilter = (state) => state.todos.projectFilter;
+export const selectSearchQuery = (state) => state.todos.searchQuery;
 export const selectSortBy = (state) => state.todos.sortBy;
 
 export const selectProjectOptions = createSelector(
@@ -57,20 +71,17 @@ export const selectProjectFilterOptions = createSelector(
 export const selectFilteredAndSortedTodos = createSelector(
   [
     selectTodos,
-    selectFilter,
+    selectStatusFilter,
     selectPriorityFilter,
     selectProjectFilter,
+    selectSearchQuery,
     selectSortBy,
   ],
-  (items, filter, priorityFilter, projectFilter, sortBy) => {
+  (items, statusFilter, priorityFilter, projectFilter, searchQuery, sortBy) => {
     let result = [...items];
 
-    if (filter === "active") {
-      result = result.filter((todo) => !todo.completed);
-    }
-
-    if (filter === "completed") {
-      result = result.filter((todo) => todo.completed);
+    if (statusFilter !== "all") {
+      result = result.filter((todo) => todo.status === statusFilter);
     }
 
     if (priorityFilter !== "all") {
@@ -79,6 +90,10 @@ export const selectFilteredAndSortedTodos = createSelector(
 
     if (projectFilter !== "all") {
       result = result.filter((todo) => todo.projectId === projectFilter);
+    }
+
+    if (searchQuery.trim()) {
+      result = result.filter((todo) => matchesSearch(todo, searchQuery.trim()));
     }
 
     if (sortBy === "date-asc") {
@@ -111,18 +126,22 @@ export const selectFilteredAndSortedTodos = createSelector(
 
 export const selectTodosStats = createSelector([selectTodos], (todos) => {
   const total = todos.length;
-  const completed = todos.filter((todo) => todo.completed).length;
-  const active = total - completed;
+  const done = todos.filter((todo) => todo.status === "done").length;
+  const inProgress = todos.filter(
+    (todo) => todo.status === "in_progress",
+  ).length;
+  const todoCount = todos.filter((todo) => todo.status === "todo").length;
 
   return {
     total,
-    active,
-    completed,
+    todo: todoCount,
+    inProgress,
+    done,
   };
 });
 
-export const selectHasCompletedTodos = createSelector([selectTodos], (todos) =>
-  todos.some((todo) => todo.completed),
+export const selectHasDoneTasks = createSelector([selectTodos], (todos) =>
+  todos.some((todo) => todo.status === "done"),
 );
 
 export const selectCanDragTodos = createSelector(

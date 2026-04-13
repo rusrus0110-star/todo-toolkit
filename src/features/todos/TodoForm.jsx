@@ -1,14 +1,21 @@
 import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Button, DatePicker, Input, Select, message } from "antd";
-import dayjs from "dayjs";
 import { addProject, addTodo } from "./todoSlice";
 import { selectProjectOptions, selectProjects } from "./selectors";
+
+const { TextArea } = Input;
 
 const priorityOptions = [
   { value: "low", label: "Low" },
   { value: "medium", label: "Medium" },
   { value: "high", label: "High" },
+];
+
+const statusOptions = [
+  { value: "todo", label: "To do" },
+  { value: "in_progress", label: "In progress" },
+  { value: "done", label: "Done" },
 ];
 
 const TodoForm = () => {
@@ -19,6 +26,8 @@ const TodoForm = () => {
   const defaultProjectId = useMemo(() => projects[0]?.id ?? null, [projects]);
 
   const [text, setText] = useState("");
+  const [description, setDescription] = useState("");
+  const [status, setStatus] = useState("todo");
   const [priority, setPriority] = useState("medium");
   const [dueDate, setDueDate] = useState(null);
   const [projectId, setProjectId] = useState(defaultProjectId);
@@ -27,6 +36,8 @@ const TodoForm = () => {
 
   const resetTaskForm = () => {
     setText("");
+    setDescription("");
+    setStatus("todo");
     setPriority("medium");
     setDueDate(null);
   };
@@ -77,6 +88,8 @@ const TodoForm = () => {
       dispatch(
         addTodo({
           text,
+          description,
+          status,
           priority,
           dueDate: dueDate ? dueDate.format("YYYY-MM-DD") : null,
           projectId,
@@ -85,7 +98,7 @@ const TodoForm = () => {
 
       resetTaskForm();
     } catch (error) {
-      message.error(error.message || "Failed to add todo");
+      message.error(error.message || "Failed to add task");
     }
   };
 
@@ -95,12 +108,27 @@ const TodoForm = () => {
         <Input
           value={text}
           onChange={(event) => setText(event.target.value)}
-          placeholder="Enter new task"
+          placeholder="Enter task title"
           size="large"
           onPressEnter={handleSubmit}
         />
 
-        <div className="todo-form-row">
+        <TextArea
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          placeholder="Enter task description"
+          autoSize={{ minRows: 3, maxRows: 5 }}
+        />
+
+        <div className="todo-form-grid">
+          <Select
+            value={status}
+            size="large"
+            onChange={setStatus}
+            options={statusOptions}
+            className="todo-status-select"
+          />
+
           <Select
             value={priority}
             size="large"
@@ -110,7 +138,7 @@ const TodoForm = () => {
           />
 
           <DatePicker
-            value={dueDate ? dayjs(dueDate) : null}
+            value={dueDate}
             size="large"
             format="DD MMM YYYY"
             onChange={(value) => setDueDate(value)}
@@ -160,7 +188,7 @@ const TodoForm = () => {
           className="add-todo-button"
           onClick={handleSubmit}
         >
-          Add Todo
+          Add Task
         </Button>
       </div>
     </div>
